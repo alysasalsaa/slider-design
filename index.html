@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Slider Design</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      min-height: 100vh;
+      background: #0f172a;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      color: #f8fafc;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem 1rem;
+      gap: 1.5rem;
+    }
+
+    header { text-align: center; }
+    header h1 { font-size: 1.75rem; font-weight: 700; }
+    header p  { font-size: 0.875rem; color: #94a3b8; margin-top: 0.25rem; }
+
+    /* ── Slider wrapper ── */
+    .slider-wrap {
+      width: 100%;
+      max-width: 780px;
+      position: relative;
+    }
+
+    /* 3D perspective container */
+    .slider-3d {
+      perspective: 1200px;
+      width: 100%;
+    }
+
+    /* Track */
+    .slider-track {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 16/9;
+      border-radius: 20px;
+      overflow: hidden;
+      box-shadow: 0 24px 60px rgba(0,0,0,0.5);
+    }
+
+    /* Slides */
+    .slide {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      transform: translateX(100%) rotateY(15deg) scale(0.9);
+      transition: opacity 0.6s ease, transform 0.6s cubic-bezier(0.4,0,0.2,1);
+      pointer-events: none;
+    }
+
+    .slide.active {
+      opacity: 1;
+      transform: translateX(0) rotateY(0deg) scale(1);
+      pointer-events: auto;
+      z-index: 2;
+    }
+
+    .slide.prev-slide {
+      opacity: 0;
+      transform: translateX(-100%) rotateY(-15deg) scale(0.9);
+      z-index: 1;
+    }
+
+    .slide img {
+      width: 100%; height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    /* Text overlay */
+    .slide-overlay {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to top, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.1) 50%, transparent 100%);
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      padding: 2rem;
+    }
+
+    .slide-tag {
+      display: inline-block;
+      background: rgba(99,102,241,0.85);
+      color: #fff;
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 3px 10px;
+      border-radius: 999px;
+      margin-bottom: 0.5rem;
+      width: fit-content;
+      backdrop-filter: blur(4px);
+    }
+
+    .slide-title {
+      font-size: clamp(1.1rem, 3vw, 1.75rem);
+      font-weight: 800;
+      line-height: 1.2;
+      color: #fff;
+      text-shadow: 0 2px 8px rgba(0,0,0,0.4);
+      margin-bottom: 0.4rem;
+    }
+
+    .slide-desc {
+      font-size: 0.82rem;
+      color: rgba(255,255,255,0.75);
+      line-height: 1.5;
+      max-width: 500px;
+    }
+
+    /* Progress bar */
+    .progress-bar {
+      position: absolute;
+      bottom: 0; left: 0;
+      height: 3px;
+      background: #6366f1;
+      border-radius: 0 2px 0 0;
+      width: 0%;
+      transition: width linear;
+      z-index: 10;
+    }
+
+    /* Nav arrows */
+    .nav-btn {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 44px; height: 44px;
+      border-radius: 50%;
+      border: none;
+      background: rgba(15,23,42,0.7);
+      backdrop-filter: blur(8px);
+      color: #f8fafc;
+      font-size: 1.1rem;
+      cursor: pointer;
+      z-index: 10;
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.15s, transform 0.08s;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+    .nav-btn:hover  { background: rgba(99,102,241,0.8); }
+    .nav-btn:active { transform: translateY(-50%) scale(0.93); }
+    .nav-prev { left: 12px; }
+    .nav-next { right: 12px; }
+
+    /* Slide counter */
+    .slide-counter {
+      position: absolute;
+      top: 14px; right: 14px;
+      background: rgba(15,23,42,0.65);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 999px;
+      padding: 3px 12px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: #fff;
+      z-index: 10;
+    }
+
+    /* Dots */
+    .dots {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      margin-top: 0.75rem;
+    }
+
+    .dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: #334155;
+      border: none;
+      cursor: pointer;
+      transition: background 0.2s, width 0.2s;
+      padding: 0;
+    }
+    .dot.active {
+      background: #6366f1;
+      width: 24px;
+      border-radius: 999px;
+    }
+
+    /* Controls */
+    .controls {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .ctrl-label {
+      font-size: 0.75rem;
+      color: #64748b;
+      font-weight: 600;
+    }
+
+    input[type="range"] {
+      accent-color: #6366f1;
+      cursor: pointer;
+      width: 120px;
+    }
+
+    .interval-val {
+      font-size: 0.75rem;
+      color: #a5b4fc;
+      font-weight: 700;
+      min-width: 30px;
+      font-family: monospace;
+    }
+
+    .btn-pause {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      color: #94a3b8;
+      font-size: 0.78rem;
+      font-weight: 600;
+      padding: 0.4rem 0.9rem;
+      cursor: pointer;
+      font-family: inherit;
+      transition: background 0.12s, color 0.12s;
+    }
+    .btn-pause:hover { background: #273549; color: #f8fafc; }
+    .btn-pause.paused { border-color: #6366f1; color: #a5b4fc; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>🖼️ Slider Design</h1>
+    <p>Image carousel with 3D transitions</p>
+  </header>
+
+  <div class="slider-wrap">
+    <div class="slider-3d">
+      <div class="slider-track" id="slider-track">
+        <div class="progress-bar" id="progress-bar"></div>
+        <div class="slide-counter" id="slide-counter">1 / 5</div>
+        <!-- Slides injected by JS -->
+      </div>
+    </div>
+
+    <!-- Arrows -->
+    <button class="nav-btn nav-prev" onclick="goTo(currentIdx - 1)">‹</button>
+    <button class="nav-btn nav-next" onclick="goTo(currentIdx + 1)">›</button>
+
+    <!-- Dots -->
+    <div class="dots" id="dots"></div>
+  </div>
+
+  <!-- Controls -->
+  <div class="controls">
+    <span class="ctrl-label">Interval:</span>
+    <input type="range" id="interval-range" min="2" max="10" value="4" step="1" oninput="updateInterval()" />
+    <span class="interval-val" id="interval-val">4s</span>
+    <button class="btn-pause" id="pause-btn" onclick="togglePause()">⏸ Pause</button>
+  </div>
+
+  <script>
+    const SLIDES = [
+      {
+        img: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=900&q=80',
+        tag: 'Nature',
+        title: 'Majestic Mountain Peaks',
+        desc: 'Towering above the clouds, these peaks remind us of nature\'s breathtaking scale.',
+      },
+      {
+        img: 'https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?w=900&q=80',
+        tag: 'City',
+        title: 'Urban Skyline at Dusk',
+        desc: 'A city that never sleeps, glowing with a thousand lights as twilight descends.',
+      },
+      {
+        img: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=900&q=80',
+        tag: 'Beach',
+        title: 'Endless Ocean Horizon',
+        desc: 'Where the sea meets the sky — a perfect moment of pure serenity.',
+      },
+      {
+        img: 'https://images.unsplash.com/photo-1448375240586-882707db888b?w=900&q=80',
+        tag: 'Forest',
+        title: 'Ancient Forest Canopy',
+        desc: 'Centuries-old trees stand guard, filtering golden light through their leaves.',
+      },
+      {
+        img: 'https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=900&q=80',
+        tag: 'Landscape',
+        title: 'Rolling Hills at Sunrise',
+        desc: 'A new day dawns over gentle hills painted in shades of amber and rose.',
+      },
+    ];
+
+    let currentIdx = 0;
+    let prevIdx    = -1;
+    let interval   = 4000;
+    let paused     = false;
+    let timer      = null;
+    let progressTimer = null;
+
+    const track   = document.getElementById('slider-track');
+    const dotsEl  = document.getElementById('dots');
+    const counter = document.getElementById('slide-counter');
+    const progBar = document.getElementById('progress-bar');
+
+    /* ── Build slides ── */
+    SLIDES.forEach((s, i) => {
+      const slide = document.createElement('div');
+      slide.className = 'slide' + (i === 0 ? ' active' : '');
+      slide.id = 'slide-' + i;
+      slide.innerHTML = `
+        <img src="${s.img}" alt="${s.title}" loading="${i === 0 ? 'eager' : 'lazy'}" />
+        <div class="slide-overlay">
+          <span class="slide-tag">${s.tag}</span>
+          <div class="slide-title">${s.title}</div>
+          <div class="slide-desc">${s.desc}</div>
+        </div>
+      `;
+      track.appendChild(slide);
+
+      const dot = document.createElement('button');
+      dot.className = 'dot' + (i === 0 ? ' active' : '');
+      dot.setAttribute('aria-label', 'Go to slide ' + (i + 1));
+      dot.addEventListener('click', () => goTo(i));
+      dotsEl.appendChild(dot);
+    });
+
+    /* ── Navigate ── */
+    function goTo(idx) {
+      const total = SLIDES.length;
+      const next  = ((idx % total) + total) % total;
+      if (next === currentIdx) return;
+
+      // Remove prev-slide class from old prev
+      if (prevIdx >= 0) document.getElementById('slide-' + prevIdx).classList.remove('prev-slide');
+
+      document.getElementById('slide-' + currentIdx).classList.remove('active');
+      document.getElementById('slide-' + currentIdx).classList.add('prev-slide');
+
+      prevIdx    = currentIdx;
+      currentIdx = next;
+
+      document.getElementById('slide-' + currentIdx).classList.add('active');
+
+      // Dots
+      document.querySelectorAll('.dot').forEach((d, i) => d.classList.toggle('active', i === currentIdx));
+
+      // Counter
+      counter.textContent = `${currentIdx + 1} / ${total}`;
+
+      // Restart progress
+      restartProgress();
+
+      // Remove prev-slide after transition
+      setTimeout(() => {
+        if (prevIdx >= 0) document.getElementById('slide-' + prevIdx).classList.remove('prev-slide');
+      }, 650);
+    }
+
+    /* ── Auto-advance ── */
+    function startTimer() {
+      clearInterval(timer);
+      timer = setInterval(() => { if (!paused) goTo(currentIdx + 1); }, interval);
+    }
+
+    /* ── Progress bar ── */
+    function restartProgress() {
+      clearTimeout(progressTimer);
+      progBar.style.transition = 'none';
+      progBar.style.width = '0%';
+      void progBar.offsetWidth;
+      progBar.style.transition = `width ${interval}ms linear`;
+      progBar.style.width = '100%';
+    }
+
+    /* ── Controls ── */
+    function togglePause() {
+      paused = !paused;
+      const btn = document.getElementById('pause-btn');
+      btn.textContent = paused ? '▶ Resume' : '⏸ Pause';
+      btn.classList.toggle('paused', paused);
+      if (paused) {
+        progBar.style.animationPlayState = 'paused';
+        // Freeze progress bar
+        const computed = getComputedStyle(progBar).width;
+        progBar.style.transition = 'none';
+        progBar.style.width = computed;
+      } else {
+        restartProgress();
+      }
+    }
+
+    function updateInterval() {
+      const val = document.getElementById('interval-range').value;
+      document.getElementById('interval-val').textContent = val + 's';
+      interval = val * 1000;
+      startTimer();
+      restartProgress();
+    }
+
+    /* ── Keyboard ── */
+    document.addEventListener('keydown', e => {
+      if (e.key === 'ArrowLeft')  goTo(currentIdx - 1);
+      if (e.key === 'ArrowRight') goTo(currentIdx + 1);
+      if (e.key === ' ') { e.preventDefault(); togglePause(); }
+    });
+
+    /* ── Touch swipe ── */
+    let touchStartX = 0;
+    track.addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; }, { passive: true });
+    track.addEventListener('touchend',   e => {
+      const diff = touchStartX - e.changedTouches[0].clientX;
+      if (Math.abs(diff) > 50) goTo(currentIdx + (diff > 0 ? 1 : -1));
+    });
+
+    /* ── Init ── */
+    startTimer();
+    restartProgress();
+  </script>
+</body>
+</html>
